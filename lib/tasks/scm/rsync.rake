@@ -1,3 +1,6 @@
+require "yaml"
+require "deep_merge"
+
 namespace :rsync do
 
   def strategy
@@ -101,6 +104,31 @@ namespace :deploy do
   task :pack do
     invoke :"deploy:check"
     invoke :"rsync:pack_release"
+  end
+
+  task :genconf do
+    on release_roles :all do
+      within release_path do
+        fqdn      = capture :hostname, "-f"
+        dist      = YAML::load File.read( "app/config/parameters.yml.dist" )
+        dist_env  = fqdn.include?( "stage" ) ? "stage" : "live"
+        dist_list = ["parameters.yml.#{dist_env}", "parameters.yml.#{dist_env}.#{fqdn[/([a-z\-]+)/,1]}"]
+
+        dist_list.each do |df|
+          if File.exists? "app/config/#{df}"
+            overrides = YAML::load File.read( "app/config/#{df}" )
+
+            dist.deep_merge! overrides
+          end
+        end
+
+        content = StringIO.new dist.to_yaml
+
+        execute "cp", "#{fetch(:deploy_to)}/shared/app/config/parameters.yml", "#{fetch(:deploy_to)}/shared/app/config/parameters-#{Time.new.strftime "%Y%m%d%H%M"}.yml"
+        upload! content, "#{fetch(:deploy_to)}/shared/app/config/parameters.yml"
+        execute "chmod", "664", "#{fetch(:deploy_to)}/shared/app/config/parameters.yml"
+      end
+    end
   end
 
 end
