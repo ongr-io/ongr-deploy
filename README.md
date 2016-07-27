@@ -42,8 +42,8 @@ For the setup we recommend to create a `Gemfile` in your project root. Check bas
   
   And then deploy:
   
-    ```
-    bundle exec cap stage deploy
-    ```
+  ```
+  bundle exec cap stage deploy
+  ```
  
  
